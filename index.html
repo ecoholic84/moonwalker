@@ -73,7 +73,7 @@
         let gameStarted = false;
         let gameOver = false;
         let score = 0;
-        let highScore = 0;
+        let highScore = parseInt(localStorage.getItem('moonwalkerHighScore')) || 0;
 
         // Moon surface parameters
         const surfaceHeight = canvas.height * 0.8;
@@ -91,7 +91,7 @@
             height: 60,
             jumping: false,
             jumpForce: 15,
-            gravity: 0.5,
+            gravity: 0.2,
             velocityY: 0
         };
 
@@ -125,6 +125,14 @@
         function updateScore() {
             scoreDiv.textContent = `Score: ${score}`;
             highScoreDiv.textContent = `High Score: ${highScore}`;
+        }
+
+        function updateHighScore() {
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('moonwalkerHighScore', highScore);
+                updateScore();
+            }
         }
 
         function updateStars() {
@@ -186,7 +194,7 @@
                 ctx.fill();
             } else {
                 // Running pose
-                const legOffset = (Math.sin(Date.now() / 100) * 5); // Leg animation
+                const legOffset = (Math.sin(Date.now() / 100) * 5);
 
                 // Body
                 ctx.fillStyle = '#CCC';
@@ -252,11 +260,11 @@
 
             updateStars();
             drawStars();
-
-            ctx.beginPath();
-            ctx.arc(100, 100, 60, 0, Math.PI * 2);
-            ctx.fillStyle = '#4286f4';
-            ctx.fill();
+            // Earth on sky
+            // ctx.beginPath();
+            // ctx.arc(100, 100, 60, 0, Math.PI * 2);
+            // ctx.fillStyle = '#4286f4';
+            // ctx.fill();
 
             drawMoonSurface();
 
@@ -306,11 +314,8 @@
                         player.y + player.height > obs.y - obs.height
                     ) {
                         gameOver = true;
-                        if (score > highScore) {
-                            highScore = score;
-                        }
+                        updateHighScore();
                         gameOverDiv.style.display = 'block';
-                        updateScore();
                     }
 
                     return obs.x > -obs.width;
@@ -338,6 +343,8 @@
             }
         });
 
+        // Initialize game
+        updateScore();
         gameLoop();
     </script>
 </body>
