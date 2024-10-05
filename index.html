@@ -1,26 +1,27 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Space Runner</title>
+    <title>Moonwalker</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             background-color: #000;
             font-family: Arial, sans-serif;
         }
-        #gameCanvas {
-            border: 2px solid #fff;
+        canvas {
+            display: block;
         }
         #gameOver {
             position: absolute;
             color: white;
             font-size: 40px;
             display: none;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
         }
         #score {
             position: absolute;
@@ -28,19 +29,26 @@
             right: 20px;
             color: white;
             font-size: 24px;
+            z-index: 10;
         }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="800" height="300"></canvas>
-    <div id="gameOver">Game Over! Press Space to restart</div>
+    <canvas id="gameCanvas"></canvas>
+    <div id="gameOver">Game Over!<br>Press Space to restart</div>
     <div id="score">Score: 0</div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const gameOverText = document.getElementById('gameOver');
-        const scoreText = document.getElementById('scoreText');
+        
+        // Set canvas to fullscreen
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
         // Game variables
         let gameStarted = false;
@@ -48,33 +56,92 @@
         let score = 0;
         let highScore = 0;
 
+        // Moon surface parameters
+        const surfaceHeight = canvas.height * 0.8;
+        const craterCount = Math.floor(canvas.width / 100);
+        const craters = Array(craterCount).fill().map(() => ({
+            x: Math.random() * canvas.width,
+            radius: Math.random() * 20 + 10
+        }));
+
         // Player
         const player = {
-            x: 50,
-            y: canvas.height - 60,
-            width: 40,
+            x: canvas.width * 0.2,
+            y: surfaceHeight - 60,
+            width: 30,
             height: 60,
             jumping: false,
-            jumpForce: 20,
-            gravity: 1,
+            jumpForce: 15,
+            gravity: 0.5,
             velocityY: 0
         };
 
         // Obstacles
         let obstacles = [];
         const obstacleTypes = [
-            { width: 20, height: 40, color: '#FF4136' },  // Meteor
-            { width: 30, height: 30, color: '#7FDBFF' }   // UFO
+            { width: 30, height: 30, type: 'rock' },
+            { width: 40, height: 20, type: 'satellite' }
         ];
 
         // Stars background
-        let stars = Array(100).fill().map(() => ({
+        let stars = Array(200).fill().map(() => ({
             x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
+            y: Math.random() * (surfaceHeight - 50),
             size: Math.random() * 2
         }));
 
-        // Game loop
+        function drawAstronaut(x, y) {
+            // Spacesuit body
+            ctx.fillStyle = '#CCC';
+            ctx.fillRect(x, y, player.width, player.height);
+            
+            // Helmet
+            ctx.fillStyle = '#7FDBFF';
+            ctx.fillRect(x - 5, y - 10, player.width + 10, player.height * 0.4);
+            
+            // Visor
+            ctx.fillStyle = '#333';
+            ctx.fillRect(x, y - 5, player.width, player.height * 0.2);
+            
+            // Backpack
+            ctx.fillStyle = '#FFF';
+            ctx.fillRect(x + player.width, y + 10, 10, player.height - 20);
+        }
+
+        function drawMoonSurface() {
+            // Main surface
+            ctx.fillStyle = '#333';
+            ctx.fillRect(0, surfaceHeight, canvas.width, canvas.height - surfaceHeight);
+            
+            // Craters
+            ctx.fillStyle = '#2A2A2A';
+            craters.forEach(crater => {
+                ctx.beginPath();
+                ctx.arc(crater.x, surfaceHeight, crater.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawObstacle(obstacle) {
+            if (obstacle.type === 'rock') {
+                ctx.fillStyle = '#666';
+                ctx.beginPath();
+                ctx.moveTo(obstacle.x, obstacle.y);
+                ctx.lineTo(obstacle.x + obstacle.width, obstacle.y);
+                ctx.lineTo(obstacle.x + obstacle.width / 2, obstacle.y - obstacle.height);
+                ctx.closePath();
+                ctx.fill();
+            } else {
+                // Satellite
+                ctx.fillStyle = '#999';
+                ctx.fillRect(obstacle.x, obstacle.y - obstacle.height, obstacle.width, obstacle.height);
+                // Solar panels
+                ctx.fillStyle = '#7FDBFF';
+                ctx.fillRect(obstacle.x - 10, obstacle.y - obstacle.height + 5, 8, 15);
+                ctx.fillRect(obstacle.x + obstacle.width + 2, obstacle.y - obstacle.height + 5, 8, 15);
+            }
+        }
+
         function gameLoop() {
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -85,17 +152,24 @@
                 ctx.beginPath();
                 ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
                 ctx.fill();
-                star.x -= 1;
-                if (star.x < 0) {
-                    star.x = canvas.width;
-                    star.y = Math.random() * canvas.height;
-                }
             });
+
+            // Draw Earth in background
+            ctx.beginPath();
+            ctx.arc(100, 100, 60, 0, Math.PI * 2);
+            ctx.fillStyle = '#4286f4';
+            ctx.fill();
+
+            drawMoonSurface();
 
             if (!gameStarted) {
                 ctx.fillStyle = '#FFF';
+                ctx.font = '30px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Welcome to Moonwalker', canvas.width / 2, canvas.height / 2 - 40);
                 ctx.font = '20px Arial';
-                ctx.fillText('Press Space to Start', canvas.width / 2 - 80, canvas.height / 2);
+                ctx.fillText('Press Space to Start', canvas.width / 2, canvas.height / 2);
+                drawAstronaut(player.x, player.y);
                 requestAnimationFrame(gameLoop);
                 return;
             }
@@ -106,42 +180,35 @@
                     player.velocityY += player.gravity;
                     player.y += player.velocityY;
 
-                    if (player.y >= canvas.height - player.height) {
-                        player.y = canvas.height - player.height;
+                    if (player.y >= surfaceHeight - player.height) {
+                        player.y = surfaceHeight - player.height;
                         player.jumping = false;
                         player.velocityY = 0;
                     }
                 }
 
-                // Draw player (astronaut)
-                ctx.fillStyle = '#FFF';
-                ctx.fillRect(player.x, player.y, player.width, player.height);
+                drawAstronaut(player.x, player.y);
                 
-                // Helmet
-                ctx.fillStyle = '#7FDBFF';
-                ctx.fillRect(player.x + 10, player.y, 20, 20);
-
                 // Update and draw obstacles
                 if (Math.random() < 0.02) {
                     const obstacleType = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
                     obstacles.push({
                         x: canvas.width,
-                        y: canvas.height - obstacleType.height,
+                        y: surfaceHeight,
                         ...obstacleType
                     });
                 }
 
                 obstacles = obstacles.filter(obs => {
                     obs.x -= 5;
-                    ctx.fillStyle = obs.color;
-                    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                    drawObstacle(obs);
 
                     // Collision detection
                     if (
                         player.x < obs.x + obs.width &&
                         player.x + player.width > obs.x &&
-                        player.y < obs.y + obs.height &&
-                        player.y + player.height > obs.y
+                        player.y < obs.y &&
+                        player.y + player.height > obs.y - obs.height
                     ) {
                         gameOver = true;
                     }
@@ -157,9 +224,6 @@
                 if (score > highScore) {
                     highScore = score;
                 }
-                ctx.fillStyle = '#FFF';
-                ctx.font = '20px Arial';
-                ctx.fillText(`High Score: ${highScore}`, canvas.width / 2 - 60, canvas.height / 2 + 40);
             }
 
             requestAnimationFrame(gameLoop);
@@ -171,13 +235,14 @@
                 e.preventDefault();
                 if (!gameStarted) {
                     gameStarted = true;
-                    gameOverText.style.display = 'none';
+                    document.getElementById('gameOver').style.display = 'none';
                 } else if (gameOver) {
                     gameOver = false;
                     gameStarted = true;
                     obstacles = [];
                     score = 0;
-                    gameOverText.style.display = 'none';
+                    document.getElementById('gameOver').style.display = 'none';
+                    player.y = surfaceHeight - player.height;
                 } else if (!player.jumping) {
                     player.jumping = true;
                     player.velocityY = -player.jumpForce;
