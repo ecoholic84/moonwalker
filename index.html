@@ -12,6 +12,14 @@
         canvas {
             display: block;
         }
+        #ui {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
         #gameOver {
             position: absolute;
             color: white;
@@ -21,28 +29,39 @@
             left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
-            z-index: 10;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         }
-        #score {
+        #score, #highScore {
             position: absolute;
-            top: 20px;
-            right: 20px;
             color: white;
             font-size: 24px;
-            z-index: 10;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        #score {
+            top: 20px;
+            right: 20px;
+        }
+        #highScore {
+            top: 50px;
+            right: 20px;
         }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
-    <div id="gameOver">Game Over!<br>Press Space to restart</div>
-    <div id="score">Score: 0</div>
+    <div id="ui">
+        <div id="gameOver">Game Over!<br>Press Space to restart</div>
+        <div id="score">Score: 0</div>
+        <div id="highScore">High Score: 0</div>
+    </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const gameOverDiv = document.getElementById('gameOver');
+        const scoreDiv = document.getElementById('score');
+        const highScoreDiv = document.getElementById('highScore');
         
-        // Set canvas to fullscreen
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -83,43 +102,130 @@
             { width: 40, height: 20, type: 'satellite' }
         ];
 
-        // Stars background
-        let stars = Array(200).fill().map(() => ({
+        // Background elements
+        const starSpeed = 1;
+        const stars = Array(200).fill().map(() => ({
             x: Math.random() * canvas.width,
             y: Math.random() * (surfaceHeight - 50),
-            size: Math.random() * 2
+            size: Math.random() * 2,
+            speed: Math.random() * 2 + starSpeed
         }));
 
-        function drawAstronaut(x, y) {
-            // Spacesuit body
-            ctx.fillStyle = '#CCC';
-            ctx.fillRect(x, y, player.width, player.height);
-            
-            // Helmet
-            ctx.fillStyle = '#7FDBFF';
-            ctx.fillRect(x - 5, y - 10, player.width + 10, player.height * 0.4);
-            
-            // Visor
-            ctx.fillStyle = '#333';
-            ctx.fillRect(x, y - 5, player.width, player.height * 0.2);
-            
-            // Backpack
+        function resetGame() {
+            gameOver = false;
+            score = 0;
+            obstacles = [];
+            player.y = surfaceHeight - player.height;
+            player.velocityY = 0;
+            player.jumping = false;
+            gameOverDiv.style.display = 'none';
+            updateScore();
+        }
+
+        function updateScore() {
+            scoreDiv.textContent = `Score: ${score}`;
+            highScoreDiv.textContent = `High Score: ${highScore}`;
+        }
+
+        function updateStars() {
+            stars.forEach(star => {
+                star.x -= star.speed;
+                if (star.x < 0) {
+                    star.x = canvas.width;
+                    star.y = Math.random() * (surfaceHeight - 50);
+                }
+            });
+        }
+
+        function drawStars() {
             ctx.fillStyle = '#FFF';
-            ctx.fillRect(x + player.width, y + 10, 10, player.height - 20);
+            stars.forEach(star => {
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawAstronaut(x, y) {
+            const baseWidth = player.width;
+            const baseHeight = player.height;
+
+            if (player.jumping) {
+                // Jumping pose
+                // Helmet
+                ctx.fillStyle = '#7FDBFF';
+                ctx.fillRect(x - 5, y - 10, baseWidth + 10, baseHeight * 0.4);
+                
+                // Visor
+                ctx.fillStyle = '#333';
+                ctx.fillRect(x, y - 5, baseWidth, baseHeight * 0.2);
+                
+                // Body - leaning forward
+                ctx.fillStyle = '#CCC';
+                ctx.save();
+                ctx.translate(x + baseWidth / 2, y + baseHeight / 2);
+                ctx.rotate(Math.PI / 8); // Rotate 22.5 degrees
+                ctx.fillRect(-baseWidth / 2, -baseHeight / 2, baseWidth, baseHeight);
+                ctx.restore();
+                
+                // Backpack - following body rotation
+                ctx.fillStyle = '#FFF';
+                ctx.save();
+                ctx.translate(x + baseWidth, y + baseHeight / 2);
+                ctx.rotate(Math.PI / 8);
+                ctx.fillRect(0, -baseHeight / 2 + 10, 10, baseHeight - 20);
+                ctx.restore();
+                
+                // Bent legs
+                ctx.fillStyle = '#CCC';
+                ctx.beginPath();
+                ctx.moveTo(x, y + baseHeight * 0.7);
+                ctx.lineTo(x + baseWidth / 2, y + baseHeight * 0.9);
+                ctx.lineTo(x + baseWidth, y + baseHeight * 0.7);
+                ctx.closePath();
+                ctx.fill();
+            } else {
+                // Running pose
+                const legOffset = (Math.sin(Date.now() / 100) * 5); // Leg animation
+
+                // Body
+                ctx.fillStyle = '#CCC';
+                ctx.fillRect(x, y, baseWidth, baseHeight * 0.6);
+                
+                // Legs
+                ctx.fillRect(x, y + baseHeight * 0.6, baseWidth / 2 - 2, baseHeight * 0.4 + legOffset);
+                ctx.fillRect(x + baseWidth / 2 + 2, y + baseHeight * 0.6, baseWidth / 2 - 2, baseHeight * 0.4 - legOffset);
+                
+                // Helmet
+                ctx.fillStyle = '#7FDBFF';
+                ctx.fillRect(x - 5, y - 10, baseWidth + 10, baseHeight * 0.4);
+                
+                // Visor
+                ctx.fillStyle = '#333';
+                ctx.fillRect(x, y - 5, baseWidth, baseHeight * 0.2);
+                
+                // Backpack
+                ctx.fillStyle = '#FFF';
+                ctx.fillRect(x + baseWidth, y + 10, 10, baseHeight - 20);
+            }
         }
 
         function drawMoonSurface() {
-            // Main surface
             ctx.fillStyle = '#333';
             ctx.fillRect(0, surfaceHeight, canvas.width, canvas.height - surfaceHeight);
             
-            // Craters
             ctx.fillStyle = '#2A2A2A';
             craters.forEach(crater => {
                 ctx.beginPath();
                 ctx.arc(crater.x, surfaceHeight, crater.radius, 0, Math.PI * 2);
                 ctx.fill();
             });
+
+            const gradient = ctx.createLinearGradient(0, surfaceHeight, 0, canvas.height);
+            gradient.addColorStop(0, 'rgba(51, 51, 51, 0.8)');
+            gradient.addColorStop(1, 'rgba(34, 34, 34, 0.4)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, surfaceHeight, canvas.width, canvas.height - surfaceHeight);
         }
 
         function drawObstacle(obstacle) {
@@ -132,10 +238,8 @@
                 ctx.closePath();
                 ctx.fill();
             } else {
-                // Satellite
                 ctx.fillStyle = '#999';
                 ctx.fillRect(obstacle.x, obstacle.y - obstacle.height, obstacle.width, obstacle.height);
-                // Solar panels
                 ctx.fillStyle = '#7FDBFF';
                 ctx.fillRect(obstacle.x - 10, obstacle.y - obstacle.height + 5, 8, 15);
                 ctx.fillRect(obstacle.x + obstacle.width + 2, obstacle.y - obstacle.height + 5, 8, 15);
@@ -146,15 +250,9 @@
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw stars
-            ctx.fillStyle = '#FFF';
-            stars.forEach(star => {
-                ctx.beginPath();
-                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
+            updateStars();
+            drawStars();
 
-            // Draw Earth in background
             ctx.beginPath();
             ctx.arc(100, 100, 60, 0, Math.PI * 2);
             ctx.fillStyle = '#4286f4';
@@ -175,7 +273,6 @@
             }
 
             if (!gameOver) {
-                // Update player
                 if (player.jumping) {
                     player.velocityY += player.gravity;
                     player.y += player.velocityY;
@@ -189,7 +286,6 @@
 
                 drawAstronaut(player.x, player.y);
                 
-                // Update and draw obstacles
                 if (Math.random() < 0.02) {
                     const obstacleType = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
                     obstacles.push({
@@ -203,7 +299,6 @@
                     obs.x -= 5;
                     drawObstacle(obs);
 
-                    // Collision detection
                     if (
                         player.x < obs.x + obs.width &&
                         player.x + player.width > obs.x &&
@@ -211,38 +306,31 @@
                         player.y + player.height > obs.y - obs.height
                     ) {
                         gameOver = true;
+                        if (score > highScore) {
+                            highScore = score;
+                        }
+                        gameOverDiv.style.display = 'block';
+                        updateScore();
                     }
 
                     return obs.x > -obs.width;
                 });
 
-                // Update score
                 score++;
-                document.getElementById('score').textContent = `Score: ${score}`;
-            } else {
-                gameOverText.style.display = 'block';
-                if (score > highScore) {
-                    highScore = score;
-                }
+                updateScore();
             }
 
             requestAnimationFrame(gameLoop);
         }
 
-        // Controls
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
                 if (!gameStarted) {
                     gameStarted = true;
-                    document.getElementById('gameOver').style.display = 'none';
+                    resetGame();
                 } else if (gameOver) {
-                    gameOver = false;
-                    gameStarted = true;
-                    obstacles = [];
-                    score = 0;
-                    document.getElementById('gameOver').style.display = 'none';
-                    player.y = surfaceHeight - player.height;
+                    resetGame();
                 } else if (!player.jumping) {
                     player.jumping = true;
                     player.velocityY = -player.jumpForce;
@@ -250,7 +338,6 @@
             }
         });
 
-        // Start game loop
         gameLoop();
     </script>
 </body>
