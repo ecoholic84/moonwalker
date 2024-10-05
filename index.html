@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Space Runner</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+        }
+        #gameCanvas {
+            border: 2px solid #fff;
+        }
+        #gameOver {
+            position: absolute;
+            color: white;
+            font-size: 40px;
+            display: none;
+        }
+        #score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="300"></canvas>
+    <div id="gameOver">Game Over! Press Space to restart</div>
+    <div id="score">Score: 0</div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameOverText = document.getElementById('gameOver');
+        const scoreText = document.getElementById('scoreText');
+
+        // Game variables
+        let gameStarted = false;
+        let gameOver = false;
+        let score = 0;
+        let highScore = 0;
+
+        // Player
+        const player = {
+            x: 50,
+            y: canvas.height - 60,
+            width: 40,
+            height: 60,
+            jumping: false,
+            jumpForce: 20,
+            gravity: 1,
+            velocityY: 0
+        };
+
+        // Obstacles
+        let obstacles = [];
+        const obstacleTypes = [
+            { width: 20, height: 40, color: '#FF4136' },  // Meteor
+            { width: 30, height: 30, color: '#7FDBFF' }   // UFO
+        ];
+
+        // Stars background
+        let stars = Array(100).fill().map(() => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 2
+        }));
+
+        // Game loop
+        function gameLoop() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw stars
+            ctx.fillStyle = '#FFF';
+            stars.forEach(star => {
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+                star.x -= 1;
+                if (star.x < 0) {
+                    star.x = canvas.width;
+                    star.y = Math.random() * canvas.height;
+                }
+            });
+
+            if (!gameStarted) {
+                ctx.fillStyle = '#FFF';
+                ctx.font = '20px Arial';
+                ctx.fillText('Press Space to Start', canvas.width / 2 - 80, canvas.height / 2);
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            if (!gameOver) {
+                // Update player
+                if (player.jumping) {
+                    player.velocityY += player.gravity;
+                    player.y += player.velocityY;
+
+                    if (player.y >= canvas.height - player.height) {
+                        player.y = canvas.height - player.height;
+                        player.jumping = false;
+                        player.velocityY = 0;
+                    }
+                }
+
+                // Draw player (astronaut)
+                ctx.fillStyle = '#FFF';
+                ctx.fillRect(player.x, player.y, player.width, player.height);
+                
+                // Helmet
+                ctx.fillStyle = '#7FDBFF';
+                ctx.fillRect(player.x + 10, player.y, 20, 20);
+
+                // Update and draw obstacles
+                if (Math.random() < 0.02) {
+                    const obstacleType = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+                    obstacles.push({
+                        x: canvas.width,
+                        y: canvas.height - obstacleType.height,
+                        ...obstacleType
+                    });
+                }
+
+                obstacles = obstacles.filter(obs => {
+                    obs.x -= 5;
+                    ctx.fillStyle = obs.color;
+                    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+
+                    // Collision detection
+                    if (
+                        player.x < obs.x + obs.width &&
+                        player.x + player.width > obs.x &&
+                        player.y < obs.y + obs.height &&
+                        player.y + player.height > obs.y
+                    ) {
+                        gameOver = true;
+                    }
+
+                    return obs.x > -obs.width;
+                });
+
+                // Update score
+                score++;
+                document.getElementById('score').textContent = `Score: ${score}`;
+            } else {
+                gameOverText.style.display = 'block';
+                if (score > highScore) {
+                    highScore = score;
+                }
+                ctx.fillStyle = '#FFF';
+                ctx.font = '20px Arial';
+                ctx.fillText(`High Score: ${highScore}`, canvas.width / 2 - 60, canvas.height / 2 + 40);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Controls
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (!gameStarted) {
+                    gameStarted = true;
+                    gameOverText.style.display = 'none';
+                } else if (gameOver) {
+                    gameOver = false;
+                    gameStarted = true;
+                    obstacles = [];
+                    score = 0;
+                    gameOverText.style.display = 'none';
+                } else if (!player.jumping) {
+                    player.jumping = true;
+                    player.velocityY = -player.jumpForce;
+                }
+            }
+        });
+
+        // Start game loop
+        gameLoop();
+    </script>
+</body>
+</html>
