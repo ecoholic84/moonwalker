@@ -228,9 +228,13 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
       // Obstacles
       let obstacles = [];
       const obstacleTypes = [
-        { width: 30, height: 30, type: "rock" },
-        { width: 40, height: 20, type: "satellite" },
-      ];
+    { width: 30, height: 30, type: 'rock', score: 10 },
+    { width: 40, height: 20, type: 'satellite', score: 20 },
+    { width: 50, height: 50, type: 'asteroid', score: 30 },
+    { width: 20, height: 60, type: 'alienPlant', score: 25 },
+    { width: 70, height: 30, type: 'spaceship', score: 40 },
+    { width: 40, height: 40, type: 'fuelCanister', score: -10, isFuel: true }
+];
 
       // Background elements
       const starSpeed = 1;
@@ -546,40 +550,110 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
         drawJetpackFire();
       }
       function drawObstacle(obstacle) {
-        if (obstacle.type === "rock") {
-          ctx.fillStyle = "#666";
-          ctx.beginPath();
-          ctx.moveTo(obstacle.x, obstacle.y);
-          ctx.lineTo(obstacle.x + obstacle.width, obstacle.y);
-          ctx.lineTo(
-            obstacle.x + obstacle.width / 2,
-            obstacle.y - obstacle.height
-          );
-          ctx.closePath();
-          ctx.fill();
-        } else {
-          ctx.fillStyle = "#999";
-          ctx.fillRect(
-            obstacle.x,
-            obstacle.y - obstacle.height,
-            obstacle.width,
-            obstacle.height
-          );
-          ctx.fillStyle = "#7FDBFF";
-          ctx.fillRect(
-            obstacle.x - 10,
-            obstacle.y - obstacle.height + 5,
-            8,
-            15
-          );
-          ctx.fillRect(
-            obstacle.x + obstacle.width + 2,
-            obstacle.y - obstacle.height + 5,
-            8,
-            15
-          );
+    ctx.save();
+    ctx.translate(obstacle.x, obstacle.y);
+
+    switch(obstacle.type) {
+        case 'rock':
+            ctx.fillStyle = '#666';
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(obstacle.width, 0);
+            ctx.lineTo(obstacle.width / 2, -obstacle.height);
+            ctx.closePath();
+            ctx.fill();
+            break;
+
+        case 'satellite':
+            ctx.fillStyle = '#999';
+            ctx.fillRect(0, -obstacle.height, obstacle.width, obstacle.height);
+            ctx.fillStyle = '#7FDBFF';
+            ctx.fillRect(-10, -obstacle.height + 5, 8, 15);
+            ctx.fillRect(obstacle.width + 2, -obstacle.height + 5, 8, 15);
+            break;
+
+        case 'asteroid':
+            ctx.fillStyle = '#A52A2A';
+            ctx.beginPath();
+            ctx.arc(obstacle.width / 2, -obstacle.height / 2, obstacle.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#8B4513';
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.arc(Math.random() * obstacle.width, -Math.random() * obstacle.height, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            break;
+
+        case 'alienPlant':
+            ctx.fillStyle = '#00FF00';
+            ctx.beginPath();
+            ctx.moveTo(obstacle.width / 2, 0);
+            ctx.lineTo(0, -obstacle.height);
+            ctx.lineTo(obstacle.width, -obstacle.height);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#FF00FF';
+            ctx.beginPath();
+            ctx.arc(obstacle.width / 2, -obstacle.height, 10, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+
+        case 'spaceship':
+            ctx.fillStyle = '#C0C0C0';
+            ctx.beginPath();
+            ctx.ellipse(obstacle.width / 2, -obstacle.height / 2, obstacle.width / 2, obstacle.height / 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#00FFFF';
+            ctx.fillRect(0, -obstacle.height / 2 - 5, obstacle.width, 10);
+            break;
+
+        case 'fuelCanister':
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(0, -obstacle.height, obstacle.width, obstacle.height);
+            ctx.fillStyle = '#FFFF00';
+            ctx.font = '20px VT323';
+            ctx.fillText('FUEL', 5, -obstacle.height / 2 + 7);
+            break;
+    }
+
+    ctx.restore();
+}
+
+function updateObstacles() {
+    obstacles = obstacles.filter(obs => {
+        obs.x -= 5;
+        drawObstacle(obs);
+
+        // Collision detection
+        if (
+            player.x < obs.x + obs.width &&
+            player.x + player.width > obs.x &&
+            player.y < obs.y &&
+            player.y + player.height > obs.y - obs.height
+        ) {
+            if (obs.isFuel) {
+                player.fuel = Math.min(player.fuel + 30, player.maxFuel);
+                updateFuelGauge();
+                return false; // Remove the fuel canister
+            } else {
+                gameOver = true;
+                player.isHit = true;
+                collisionSound.play();
+                jetpackSound.pause();
+                updateHighScore();
+                gameOverDiv.style.display = 'block';
+            }
         }
-      }
+
+        if (obs.x + obs.width < player.x) {
+            score += obs.score;
+            updateScore();
+        }
+
+        return obs.x > -obs.width;
+    });
+}
 
       function gameLoop() {
         ctx.fillStyle = "#000";
@@ -643,17 +717,22 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
           updatePlayerAnimation();
           drawAstronaut(player.x, player.y);
           updateFuelGauge();
+          spawnObstacle();
+        updateObstacles();
 
           // Spawn obstacles
-          if (Math.random() < 0.02) {
-            const obstacleType =
-              obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
-            obstacles.push({
-              x: canvas.width,
-              y: surfaceHeight,
-              ...obstacleType,
-            });
-          }
+          function spawnObstacle() {
+    if (Math.random() < 0.02) {
+        const obstacleType = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+        const yPosition = obstacleType.type === 'alienPlant' ? surfaceHeight : 
+                          Math.random() * (surfaceHeight - obstacleType.height);
+        obstacles.push({
+            x: canvas.width,
+            y: yPosition,
+            ...obstacleType
+        });
+    }
+}
 
           // Update and check obstacles
           obstacles = obstacles.filter((obs) => {
