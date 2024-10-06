@@ -1,20 +1,20 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <title>Moonwalker</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        
         body {
             margin: 0;
             overflow: hidden;
             background-color: #000;
-            font-family: Arial, sans-serif;
+            font-family: 'VT323', monospace;
+            color: #fff;
         }
-
         canvas {
             display: block;
         }
-
         #ui {
             position: fixed;
             top: 0;
@@ -23,52 +23,109 @@
             height: 100%;
             pointer-events: none;
         }
-
-        #gameOver {
+        #gameOver, #score, #highScore, #fuelGauge {
             position: absolute;
-            color: white;
-            font-size: 40px;
+            font-size: 24px;
+            text-shadow: 2px 2px 0px #000;
+        }
+        #gameOver {
             display: none;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            font-size: 40px;
         }
-
-        #score,
-        #highScore,
-        #fuelGauge {
-            position: absolute;
-            color: white;
+        #score { top: 20px; right: 20px; }
+        #highScore { top: 50px; right: 20px; }
+        #fuelGauge { top: 80px; right: 20px; }
+        #landingPage {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        #landingPage pre {
+            font-size: 12px;
+            line-height: 1;
+            text-align: center;
+            margin-bottom: 20px;
+            white-space: pre;
+        }
+        #landingPage p {
             font-size: 24px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            max-width: 80%;
+            margin-bottom: 40px;
         }
-
-        #score {
-            top: 20px;
-            right: 20px;
+        #startButton {
+            font-family: 'VT323', monospace;
+            font-size: 24px;
+            padding: 10px 20px;
+            background-color: #000;
+            color: #fff;
+            border: 2px solid #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
-
-        #highScore {
-            top: 50px;
-            right: 20px;
+        #startButton:hover {
+            background-color: #fff;
+            color: #000;
         }
-
-        #fuelGauge {
-            top: 80px;
-            right: 20px;
+        @keyframes flicker {
+            0% { opacity: 0.8; }
+            50% { opacity: 1; }
+            100% { opacity: 0.8; }
+        }
+        .crt-effect {
+            animation: flicker 0.15s infinite;
+            position: relative;
+        }
+        .crt-effect::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
         }
     </style>
 </head>
-
 <body>
+    <div id="landingPage" class="crt-effect">
+        <pre>
+
+___      ___     ______      ______    _____  ___   __   __  ___       __      ___       __   ___  _______   _______   
+|"  \    /"  |   /    " \    /    " \  (\"   \|"  \ |"  |/  \|  "|     /""\    |"  |     |/"| /  ")/"     "| /"      \  
+ \   \  //   |  // ____  \  // ____  \ |.\\   \    ||'  /    \:  |    /    \   ||  |     (: |/   /(: ______)|:        | 
+ /\\  \/.    | /  /    ) :)/  /    ) :)|: \.   \\  ||: /'        |   /' /\  \  |:  |     |    __/  \/    |  |_____/   ) 
+|: \.        |(: (____/ //(: (____/ // |.  \    \. | \//  /\'    |  //  __'  \  \  |___  (// _  \  // ___)_  //      /  
+|.  \    /:  | \        /  \        /  |    \    \ | /   /  \\   | /   /  \\  \( \_|:  \ |: | \  \(:      "||:  __   \  
+|___|\__/|___|  \"_____/    \"_____/    \___|\____\)|___/    \___|(___/    \___)\_______)(__|  \__)\_______)|__|  \___) 
+                                                                                                                                    
+              
+        </pre>
+        <p>An intergalactic game by<br>Akash A, Ramshad Rahman, Shone Binu and C.A Aravind</p>
+        <button id="startButton">START GAME</button>
+    </div>
     <canvas id="gameCanvas"></canvas>
-    <div id="ui">
-        <div id="gameOver">Game Over!<br>Press Space to restart</div>
-        <div id="score">Score: 0</div>
-        <div id="highScore">High Score: 0</div>
-        <div id="fuelGauge">Fuel: 100%</div>
+    <div id="ui" class="crt-effect">
+        <div id="gameOver">GAME OVER!<br>PRESS SPACE TO RESTART</div>
+        <div id="score">SCORE: 0</div>
+        <div id="highScore">HIGH SCORE: 0</div>
+        <div id="fuelGauge">FUEL: 100%</div>
     </div>
 
     <script>
@@ -521,10 +578,21 @@
             jetpackSound.pause();
         });
 
-        // Initialize game
-        updateScore();
-        gameLoop();
+        function initGame() {
+            updateScore();
+            gameLoop();
+        }
+
+        // Add event listener for the start button
+        document.getElementById('startButton').addEventListener('click', function() {
+            document.getElementById('landingPage').style.display = 'none';
+            gameStarted = true;
+            resetGame();
+            initGame();
+        });
+
+        // Replace the immediate call to gameLoop() at the end with:
+        // initGame();
     </script>
 </body>
-
 </html>
