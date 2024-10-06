@@ -31,7 +31,7 @@
             text-align: center;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         }
-        #score, #highScore {
+        #score, #highScore, #fuelGauge {
             position: absolute;
             color: white;
             font-size: 24px;
@@ -45,6 +45,10 @@
             top: 50px;
             right: 20px;
         }
+        #fuelGauge {
+            top: 80px;
+            right: 20px;
+        }
     </style>
 </head>
 <body>
@@ -53,6 +57,7 @@
         <div id="gameOver">Game Over!<br>Press Space to restart</div>
         <div id="score">Score: 0</div>
         <div id="highScore">High Score: 0</div>
+        <div id="fuelGauge">Fuel: 100%</div>
     </div>
 
     <script>
@@ -61,6 +66,15 @@
         const gameOverDiv = document.getElementById('gameOver');
         const scoreDiv = document.getElementById('score');
         const highScoreDiv = document.getElementById('highScore');
+        const fuelGaugeDiv = document.getElementById('fuelGauge');
+        
+        // Audio setup
+        const jetpackSound = new Audio("data:audio/wav;base64,UklGRnQGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YU8GAACBhYqFbF1fdJivrJBhNjVgodDPmmstN3TEzsVyNzJnsMnAdzpEbpyRhHRtbIR0X1xjhZSUdVZNW4mZmX1QNEFwqa2ZaBsoWrvGwIBPMEKFtbqbczY3Y5GLg3x9gHxvX2BwAAAAAAAAfAAAAHwAAHwAAHwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        jetpackSound.volume = 0.2;
+        jetpackSound.loop = true;
+        
+        const collisionSound = new Audio("data:audio/wav;base64,UklGRqQDAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YYADAACBhYqFbF1fdJivrJBhNjVgodDPmmstN3TEzsVyNzJnsMnAdzpEbpyRhHRtbIR0X1xjhZSUdVZNW4mZmX1QNEFwqa2ZaBsoWrvGwIBPMEKFtbqbczY3Y5GLg3x9gHxvX2BwfwAAfAAAAHwAAHwAAHwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        collisionSound.volume = 0.4;
         
         function resizeCanvas() {
             canvas.width = window.innerWidth;
@@ -77,11 +91,6 @@
 
         // Moon surface parameters
         const surfaceHeight = canvas.height * 0.8;
-        const craterCount = Math.floor(canvas.width / 100);
-        const craters = Array(craterCount).fill().map(() => ({
-            x: Math.random() * canvas.width,
-            radius: Math.random() * 20 + 10
-        }));
 
         // Player
         const player = {
@@ -89,10 +98,13 @@
             y: surfaceHeight - 60,
             width: 30,
             height: 60,
-            jumping: false,
-            jumpForce: 15,
-            gravity: 0.2,
-            velocityY: 0
+            velocityY: 0,
+            gravity: 0.5,
+            jetpackForce: 1,
+            fuel: 100,
+            maxFuel: 100,
+            fuelConsumption: .7,
+            fuelRegenRate: 0.3
         };
 
         // Obstacles
@@ -111,20 +123,27 @@
             speed: Math.random() * 2 + starSpeed
         }));
 
+        let spacePressed = false;
+
         function resetGame() {
             gameOver = false;
             score = 0;
             obstacles = [];
             player.y = surfaceHeight - player.height;
             player.velocityY = 0;
-            player.jumping = false;
+            player.fuel = player.maxFuel;
             gameOverDiv.style.display = 'none';
             updateScore();
+            updateFuelGauge();
         }
 
         function updateScore() {
             scoreDiv.textContent = `Score: ${score}`;
             highScoreDiv.textContent = `High Score: ${highScore}`;
+        }
+
+        function updateFuelGauge() {
+            fuelGaugeDiv.textContent = `Fuel: ${Math.round(player.fuel)}%`;
         }
 
         function updateHighScore() {
@@ -154,80 +173,48 @@
             });
         }
 
+        function drawJetpackFire() {
+            if (spacePressed && player.fuel > 0) {
+                ctx.fillStyle = '#FFA500';
+                ctx.beginPath();
+                ctx.moveTo(player.x, player.y + player.height);
+                ctx.lineTo(player.x - 15, player.y + player.height + 20);
+                ctx.lineTo(player.x + 15, player.y + player.height + 20);
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+
         function drawAstronaut(x, y) {
             const baseWidth = player.width;
             const baseHeight = player.height;
 
-            if (player.jumping) {
-                // Jumping pose
-                // Helmet
-                ctx.fillStyle = '#7FDBFF';
-                ctx.fillRect(x - 5, y - 10, baseWidth + 10, baseHeight * 0.4);
-                
-                // Visor
-                ctx.fillStyle = '#333';
-                ctx.fillRect(x, y - 5, baseWidth, baseHeight * 0.2);
-                
-                // Body - leaning forward
-                ctx.fillStyle = '#CCC';
-                ctx.save();
-                ctx.translate(x + baseWidth / 2, y + baseHeight / 2);
-                ctx.rotate(Math.PI / 8); // Rotate 22.5 degrees
-                ctx.fillRect(-baseWidth / 2, -baseHeight / 2, baseWidth, baseHeight);
-                ctx.restore();
-                
-                // Backpack - following body rotation
-                ctx.fillStyle = '#FFF';
-                ctx.save();
-                ctx.translate(x + baseWidth, y + baseHeight / 2);
-                ctx.rotate(Math.PI / 8);
-                ctx.fillRect(0, -baseHeight / 2 + 10, 10, baseHeight - 20);
-                ctx.restore();
-                
-                // Bent legs
-                ctx.fillStyle = '#CCC';
-                ctx.beginPath();
-                ctx.moveTo(x, y + baseHeight * 0.7);
-                ctx.lineTo(x + baseWidth / 2, y + baseHeight * 0.9);
-                ctx.lineTo(x + baseWidth, y + baseHeight * 0.7);
-                ctx.closePath();
-                ctx.fill();
-            } else {
-                // Running pose
-                const legOffset = (Math.sin(Date.now() / 100) * 5);
+            // Body
+            ctx.fillStyle = '#CCC';
+            ctx.fillRect(x, y, baseWidth, baseHeight * 0.6);
+            
+            // Legs
+            ctx.fillRect(x, y + baseHeight * 0.6, baseWidth / 2 - 2, baseHeight * 0.4);
+            ctx.fillRect(x + baseWidth / 2 + 2, y + baseHeight * 0.6, baseWidth / 2 - 2, baseHeight * 0.4);
+            
+            // Helmet
+            ctx.fillStyle = '#7FDBFF';
+            ctx.fillRect(x - 5, y - 10, baseWidth + 10, baseHeight * 0.4);
+            
+            // Visor
+            ctx.fillStyle = '#333';
+            ctx.fillRect(x, y - 5, baseWidth, baseHeight * 0.2);
+            
+            // Jetpack
+            ctx.fillStyle = '#FFF';
+            ctx.fillRect(x + baseWidth, y + 10, 10, baseHeight - 20);
 
-                // Body
-                ctx.fillStyle = '#CCC';
-                ctx.fillRect(x, y, baseWidth, baseHeight * 0.6);
-                
-                // Legs
-                ctx.fillRect(x, y + baseHeight * 0.6, baseWidth / 2 - 2, baseHeight * 0.4 + legOffset);
-                ctx.fillRect(x + baseWidth / 2 + 2, y + baseHeight * 0.6, baseWidth / 2 - 2, baseHeight * 0.4 - legOffset);
-                
-                // Helmet
-                ctx.fillStyle = '#7FDBFF';
-                ctx.fillRect(x - 5, y - 10, baseWidth + 10, baseHeight * 0.4);
-                
-                // Visor
-                ctx.fillStyle = '#333';
-                ctx.fillRect(x, y - 5, baseWidth, baseHeight * 0.2);
-                
-                // Backpack
-                ctx.fillStyle = '#FFF';
-                ctx.fillRect(x + baseWidth, y + 10, 10, baseHeight - 20);
-            }
+            drawJetpackFire();
         }
 
         function drawMoonSurface() {
             ctx.fillStyle = '#333';
             ctx.fillRect(0, surfaceHeight, canvas.width, canvas.height - surfaceHeight);
-            
-            ctx.fillStyle = '#2A2A2A';
-            craters.forEach(crater => {
-                ctx.beginPath();
-                ctx.arc(crater.x, surfaceHeight, crater.radius, 0, Math.PI * 2);
-                ctx.fill();
-            });
 
             const gradient = ctx.createLinearGradient(0, surfaceHeight, 0, canvas.height);
             gradient.addColorStop(0, 'rgba(51, 51, 51, 0.8)');
@@ -260,12 +247,6 @@
 
             updateStars();
             drawStars();
-            // Earth on sky
-            // ctx.beginPath();
-            // ctx.arc(100, 100, 60, 0, Math.PI * 2);
-            // ctx.fillStyle = '#4286f4';
-            // ctx.fill();
-
             drawMoonSurface();
 
             if (!gameStarted) {
@@ -274,25 +255,38 @@
                 ctx.textAlign = 'center';
                 ctx.fillText('Welcome to Moonwalker', canvas.width / 2, canvas.height / 2 - 40);
                 ctx.font = '20px Arial';
-                ctx.fillText('Press Space to Start', canvas.width / 2, canvas.height / 2);
+                ctx.fillText('Hold Space to use Jetpack', canvas.width / 2, canvas.height / 2);
                 drawAstronaut(player.x, player.y);
                 requestAnimationFrame(gameLoop);
                 return;
             }
 
             if (!gameOver) {
-                if (player.jumping) {
-                    player.velocityY += player.gravity;
-                    player.y += player.velocityY;
+                // Jetpack physics
+                if (spacePressed && player.fuel > 0) {
+                    player.velocityY -= player.jetpackForce;
+                    player.fuel = Math.max(0, player.fuel - player.fuelConsumption);
+                } else if (player.fuel < player.maxFuel && player.y >= surfaceHeight - player.height) {
+                    player.fuel = Math.min(player.maxFuel, player.fuel + player.fuelRegenRate);
+                }
+                
+                player.velocityY += player.gravity;
+                player.y += player.velocityY;
 
-                    if (player.y >= surfaceHeight - player.height) {
-                        player.y = surfaceHeight - player.height;
-                        player.jumping = false;
-                        player.velocityY = 0;
-                    }
+                // Ground collision
+                if (player.y >= surfaceHeight - player.height) {
+                    player.y = surfaceHeight - player.height;
+                    player.velocityY = 0;
+                }
+
+                // Ceiling collision
+                if (player.y < 0) {
+                    player.y = 0;
+                    player.velocityY = 0;
                 }
 
                 drawAstronaut(player.x, player.y);
+                updateFuelGauge();
                 
                 if (Math.random() < 0.02) {
                     const obstacleType = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
@@ -314,6 +308,8 @@
                         player.y + player.height > obs.y - obs.height
                     ) {
                         gameOver = true;
+                        collisionSound.play();
+                        jetpackSound.pause();
                         updateHighScore();
                         gameOverDiv.style.display = 'block';
                     }
@@ -336,10 +332,19 @@
                     resetGame();
                 } else if (gameOver) {
                     resetGame();
-                } else if (!player.jumping) {
-                    player.jumping = true;
-                    player.velocityY = -player.jumpForce;
+                } else {
+                    spacePressed = true;
+                    if (!jetpackSound.playing) {
+                        jetpackSound.play();
+                    }
                 }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'Space') {
+                spacePressed = false;
+                jetpackSound.pause();
             }
         });
 
