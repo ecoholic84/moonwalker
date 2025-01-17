@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html>
-
 <head>
   <title>Moonwalker</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
-  <link rel="icon" href="helmet.png" type="image/x-icon" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <link rel="icon" href="helmet.png" type="image/x-icon">
   <style>
     body {
       margin: 0;
       overflow: hidden;
       background-color: #000;
-      font-family: "VT323", monospace;
+      font-family: 'VT323', monospace;
       color: #fff;
     }
 
@@ -155,28 +155,27 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
 |"  \    /"  |   /    " \    /    " \  (\"   \|"  \ |"  |/  \|  "|     /""\    |"  |     |/"| /  ")/"     "| /"      \  
  \   \  //   |  // ____  \  // ____  \ |.\\   \    ||'  /    \:  |    /    \   ||  |     (: |/   /(: ______)|:        | 
  /\\  \/.    | /  /    ) :)/  /    ) :)|: \.   \\  ||: /'        |   /' /\  \  |:  |     |    __/  \/    |  |_____/   ) 
-|: \.        |(: (____/ //(: (____/ // |.  \    \. | \//  /\'    |  //  __'  \  \  |___  (// _  \  // ___)_  //      /  
-|.  \    /:  | \        /  \        /  |    \    \ | /   /  \\   | /   /  \\  \( \_|:  \ |: | \  \(:      "||:  __   \  
+|: \.        |(: (____/ //(: (____/ // |. \    \. | \//  /\'    |  //  __'  \  \  |___  (// _  \  // ___)_  //      /  
+|. \    /:  | \        /  \        /  |    \    \ | /   /  \\   | /   /  \\  \( \_|:  \ |: | \  \(:      "||:  __   \  
 |___|\__/|___|  \"_____/    \"_____/    \___|\____\)|___/    \___|(___/    \___)\_______)(__|  \__)\_______)|__|  \___) 
                                                                                                                                     
               
         </pre>
     <p>
-      An intergalactic game by<br />Akash A, Ramshad Rahman, Shone Binu and
-      C.A Aravind
+      An intergalactic game by
     </p>
     <button id="startButton">START GAME</button>
   </div>
   <canvas id="gameCanvas"></canvas>
   <div id="ui" class="crt-effect">
-    <div id="gameOver">GAME OVER!<br />PRESS SPACE TO RESTART</div>
+    <div id="gameOver">GAME OVER!<br>PRESS SPACE TO RESTART</div>
     <div id="score">SCORE: 0</div>
     <div id="highScore">HIGH SCORE: 0</div>
     <div id="fuelGauge">FUEL: 100%</div>
   </div>
 
   <audio id="bgMusic" loop>
-    <source src="./wonder.mp3" type="audio/mpeg" />
+    <source src="./wonder.mp3" type="audio/mpeg">
     Your browser does not support the audio element.
   </audio>
 
@@ -272,8 +271,19 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
     }
 
     function updateFuelGauge() {
-      fuelGaugeDiv.textContent = `Fuel: ${Math.round(player.fuel)}%`;
+      const fuelPercentage = Math.round(player.fuel);
+      fuelGaugeDiv.textContent = `FUEL: ${fuelPercentage}%`;
+
+      // Change fuel gauge color based on fuel level
+      if (fuelPercentage > 60) {
+        fuelGaugeDiv.style.color = '#00FF00'; // Green
+      } else if (fuelPercentage > 25) {
+        fuelGaugeDiv.style.color = '#FFFF00'; // Yellow
+      } else {
+        fuelGaugeDiv.style.color = '#FF0000'; // Red
+      }
     }
+
 
     function updateHighScore() {
       if (score > highScore) {
@@ -521,22 +531,28 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
           obstacles = obstacles.filter((obs) => {
             obs.x -= 5;
             drawObstacle(obs);
-
-            // Collision detection
-            if (
-              player.x < obs.x + obs.width &&
-              player.x + player.width > obs.x &&
-              player.y < obs.y &&
-              player.y + player.height > obs.y - obs.height
-            ) {
+          // Collision detection
+          if (
+            player.x < obs.x + obs.width &&
+            player.x + player.width > obs.x &&
+            player.y < obs.y &&
+            player.y + player.height > obs.y - obs.height
+          ) {
+            if (!gameOver) { // Vibrate only once per collision
               gameOver = true;
               player.isHit = true;
+
+              // Vibrate on collision (if supported)
+              if (navigator.vibrate) {
+                navigator.vibrate(200); // Vibrate for 200ms
+              }
+
               collisionSound.play();
               jetpackSound.pause();
               updateHighScore();
               gameOverDiv.style.display = "block";
             }
-
+          }
             return obs.x > -obs.width;
           });
 
