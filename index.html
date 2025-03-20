@@ -16,6 +16,9 @@
         --surface-color: #242629;
         --text-color: #FFFFFE;
         --highlight-color: #7F5AF0;
+        --fuel-high: #2ECC40;
+        --fuel-medium: #FFDC00;
+        --fuel-low: #FF4136;
       }
       
       body {
@@ -68,40 +71,47 @@
 
       .stats-panel {
         position: fixed;
-        top: 10px;
-        right: 10px;
-        background-color: rgba(0, 0, 0, 0.6);
-        padding: 15px;
+        top: 15px;
+        right: 15px;
+        background-color: rgba(0, 0, 0, 0.7);
+        padding: 15px 20px;
         border-radius: 10px;
         border-left: 3px solid var(--primary-color);
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
         backdrop-filter: blur(5px);
         transition: all 0.3s ease;
         transform-origin: top right;
+        z-index: 100;
+        min-width: 150px;
       }
 
       #score {
         top: 5px;
         right: 0;
         margin: 0;
+        padding: 4px 0;
       }
 
       #highScore {
-        top: 35px;
+        top: 38px;
         right: 0;
         margin: 0;
+        padding: 4px 0;
       }
 
       #fuelGauge {
-        top: 65px;
+        top: 71px;
         right: 0;
         margin: 0;
+        padding: 4px 0;
+        /* Fuel gauge will change color based on level */
       }
 
       #level {
-        top: 95px;
+        top: 104px;
         right: 0;
         margin: 0;
+        padding: 4px 0;
       }
 
       #pauseIndicator {
@@ -118,21 +128,9 @@
         box-shadow: 0 0 20px var(--primary-color);
       }
 
+      /* Removing fuel bar as requested */
       .fuel-bar {
-        width: 150px;
-        height: 12px;
-        background-color: rgba(255, 255, 255, 0.2);
-        border-radius: 6px;
-        margin-top: 5px;
-        overflow: hidden;
-      }
-
-      .fuel-level {
-        height: 100%;
-        width: 100%;
-        background: linear-gradient(90deg, #FF4500, #FFA500);
-        border-radius: 6px;
-        transition: width 0.2s ease-out;
+        display: none;
       }
 
       #landingPage {
@@ -243,49 +241,23 @@
         color: rgba(255, 255, 255, 0.7);
       }
 
-      #mobileControls {
-        position: fixed;
-        bottom: 20px;
-        width: 100%;
-        display: flex;
-        justify-content: center;
-        gap: 20px;
-        display: none;
-      }
-
-      #jetpackButton {
-        width: 120px;
-        height: 120px;
-        background-color: var(--accent-color);
-        color: var(--text-color);
-        border: none;
-        border-radius: 60px;
-        pointer-events: auto;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 20px;
-        box-shadow: 0 0 20px rgba(255, 137, 6, 0.7);
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-      }
-
-      #jetpackButton:active {
-        transform: scale(0.95);
-        box-shadow: 0 0 30px rgba(255, 137, 6, 0.9);
-      }
-
       #pauseButton {
-        width: 60px;
-        height: 60px;
-        background-color: rgba(255, 255, 255, 0.2);
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        width: 40px;
+        height: 40px;
+        background-color: rgba(0, 0, 0, 0.6);
         border: none;
-        border-radius: 30px;
+        border-radius: 20px;
+        color: var(--text-color);
         pointer-events: auto;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
-        margin-top: 30px;
+        font-size: 18px;
+        z-index: 200;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
       }
 
       .powerup-indicator {
@@ -330,6 +302,35 @@
         pointer-events: none;
         animation: float-up 1s forwards ease-out;
         font-weight: bold;
+      }
+
+      #tapOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 50;
+        pointer-events: none; /* Default to no pointer events on desktop */
+        display: none; /* Initially hidden */
+      }
+
+      #tapInstructions {
+        position: fixed;
+        bottom: 40px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(0, 0, 0, 0.7);
+        color: var(--text-color);
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-size: 18px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.5s ease;
+        z-index: 100;
+        font-weight: bold;
+        display: none; /* Initially hidden, only shown on mobile */
       }
 
       @keyframes float-up {
@@ -403,27 +404,90 @@
         100% { opacity: 0; transform: translate(-50%, -30%); }
       }
 
+      /* Mobile optimization */
       @media (max-width: 768px) {
-        #mobileControls {
-          display: flex;
+        #tapOverlay {
+          display: block;
+          pointer-events: auto; /* Enable pointer events on mobile */
+        }
+        
+        #tapInstructions {
+          display: block; /* Show tap instructions on mobile */
         }
         
         #landingPage pre {
-          font-size: 8px;
+          font-size: 6px; /* Smaller logo on mobile */
         }
         
-        .stats-panel {
-          top: 10px;
-          right: 10px;
-          padding: 10px;
-        }
-        
-        #score, #highScore, #fuelGauge, #level {
+        #landingPage p {
           font-size: 18px;
         }
         
-        .fuel-bar {
-          width: 120px;
+        .stats-panel {
+          top: 15px;
+          right: 15px;
+          padding: 12px 15px;
+          border-radius: 8px;
+          min-width: 130px;
+        }
+        
+        #score, #highScore, #fuelGauge, #level {
+          font-size: 16px; /* More readable text size on mobile */
+          line-height: 1.3;
+          letter-spacing: 0.5px;
+          padding: 3px 0;
+        }
+        
+        #fuelGauge {
+          font-weight: bold; /* Make fuel easier to see */
+        }
+        
+        .powerup-indicator {
+          font-size: 14px;
+          padding: 5px 10px;
+          top: 145px;
+          right: 15px;
+        }
+        
+        .powerup-icon {
+          width: 14px;
+          height: 14px;
+        }
+        
+        #gameOver {
+          font-size: 32px;
+          padding: 20px;
+        }
+        
+        #pauseIndicator {
+          font-size: 32px;
+          padding: 20px;
+        }
+        
+        .level-up-notification {
+          font-size: 24px;
+          padding: 15px 30px;
+        }
+        
+        /* Control instructions for mobile */
+        #controlsInfo {
+          font-size: 14px;
+        }
+      }
+
+      /* Extra small devices */
+      @media (max-width: 375px) {
+        #landingPage pre {
+          font-size: 4px;
+        }
+        
+        .stats-panel {
+          padding: 10px 12px;
+          min-width: 120px;
+        }
+        
+        #score, #highScore, #fuelGauge, #level {
+          font-size: 15px;
         }
       }
     </style>
@@ -448,29 +512,28 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
       <button id="toggleEffectsButton" class="button">RETRO MODE: OFF</button>
       <div id="controlsInfo">
         Desktop: Press SPACE to use jetpack | P to pause<br>
-        Mobile: Tap the jetpack button
+        Mobile: Tap anywhere to fly
       </div>
     </div>
     
     <canvas id="gameCanvas"></canvas>
     
     <div id="ui">
-      <div id="gameOver">GAME OVER!<br />PRESS SPACE TO RESTART</div>
-      <div id="pauseIndicator">PAUSED<br />PRESS P TO RESUME</div>
+      <div id="gameOver">GAME OVER!<br />TAP TO RESTART</div>
+      <div id="pauseIndicator">PAUSED<br />TAP TO RESUME</div>
       
       <div class="stats-panel">
         <div id="score">SCORE: 0</div>
         <div id="highScore">HIGH SCORE: 0</div>
         <div id="fuelGauge">FUEL: 100%</div>
-        <div class="fuel-bar"><div class="fuel-level" style="width: 100%"></div></div>
         <div id="level">LEVEL: 1</div>
       </div>
     </div>
 
-    <div id="mobileControls">
-      <button id="jetpackButton">BOOST</button>
-      <button id="pauseButton">II</button>
-    </div>
+    <!-- Tap overlay for mobile -->
+    <div id="tapOverlay"></div>
+    <div id="tapInstructions">TAP TO FLY</div>
+    <button id="pauseButton">II</button>
 
     <script>
       // Game Manager - Handles game state, initialization and main loop
@@ -487,11 +550,12 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
           this.highScoreDiv = document.getElementById("highScore");
           this.fuelGaugeDiv = document.getElementById("fuelGauge");
           this.levelDiv = document.getElementById("level");
-          this.fuelLevelBar = document.querySelector(".fuel-level");
+          this.tapInstructionsDiv = document.getElementById("tapInstructions");
           
           // Game settings
           this.retroMode = false;
           this.uiScale = 1;
+          this.isMobile = window.innerWidth <= 768;
           
           // Game state
           this.gameStarted = false;
@@ -500,7 +564,7 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
           this.score = 0;
           this.highScore = parseInt(localStorage.getItem("moonwalkerHighScore")) || 0;
           this.level = 1;
-          this.levelThreshold = 500; // Score needed to advance to next level (made smaller for quicker progression)
+          this.levelThreshold = 500; // Score needed to advance to next level
           this.comboMultiplier = 1;
           this.comboTimer = 0;
           this.powerups = [];
@@ -517,6 +581,7 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
           
           // Input state
           this.spacePressed = false;
+          this.tapActive = false;
           
           // Timing variables
           this.lastTime = 0;
@@ -529,6 +594,9 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
           this.shakeIntensity = 0;
           this.shakeDuration = 0;
           this.shakeStartTime = 0;
+          
+          // Instruction fade timer
+          this.instructionFadeTimer = 0;
           
           // Setup event listeners
           this.setupEventListeners();
@@ -545,6 +613,43 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
           // Calculate surface height relative to canvas height
           this.surfaceHeight = this.canvas.height * 0.8;
           console.log("Initial surface height:", this.surfaceHeight);
+          
+          // Check if mobile and set up mobile-specific UI
+          this.checkMobileStatus();
+        }
+        
+        checkMobileStatus() {
+          // Check if mobile based on screen width
+          const wasMobile = this.isMobile;
+          this.isMobile = window.innerWidth <= 768;
+          
+          // If mobile status changed, update UI accordingly
+          if (wasMobile !== this.isMobile) {
+            if (this.isMobile) {
+              // Enable mobile controls
+              document.getElementById("tapOverlay").style.display = "block";
+              document.getElementById("tapOverlay").style.pointerEvents = "auto";
+              
+              // Show mobile pause button at proper position
+              const pauseButton = document.getElementById("pauseButton");
+              pauseButton.style.display = "flex";
+              pauseButton.style.top = "15px";
+              pauseButton.style.left = "15px";
+              
+              // Adjust mobile text sizes for better readability
+              const statsItems = document.querySelectorAll('.stats-panel > div');
+              statsItems.forEach(item => item.style.fontSize = window.innerWidth <= 375 ? '15px' : '16px');
+            } else {
+              // Disable mobile controls
+              document.getElementById("tapOverlay").style.display = "none";
+              document.getElementById("tapOverlay").style.pointerEvents = "none";
+              document.getElementById("tapInstructions").style.display = "none";
+              
+              // Reset text sizes for desktop
+              const statsItems = document.querySelectorAll('.stats-panel > div');
+              statsItems.forEach(item => item.style.fontSize = '24px');
+            }
+          }
         }
         
         resizeCanvas() {
@@ -562,6 +667,9 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
               this.player.y = this.surfaceHeight - this.player.height;
             }
           }
+          
+          // Update mobile check and UI
+          this.checkMobileStatus();
         }
         
         initAudio() {
@@ -646,36 +754,25 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
             }
           });
           
-          // Mobile controls
-          const jetpackButton = document.getElementById("jetpackButton");
+          // Tap controls for mobile only
+          const tapOverlay = document.getElementById("tapOverlay");
+          
+          tapOverlay.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            this.handleTapStart();
+          });
+          
+          tapOverlay.addEventListener("touchend", (e) => {
+            e.preventDefault();
+            this.handleTapEnd();
+          });
+          
+          // Pause button
           const pauseButton = document.getElementById("pauseButton");
-          
-          jetpackButton.addEventListener("touchstart", (e) => {
-            e.preventDefault();
-            this.handleSpaceKeyDown();
-          });
-          
-          jetpackButton.addEventListener("touchend", (e) => {
-            e.preventDefault();
-            this.spacePressed = false;
-            this.sounds.jetpack.stop();
-          });
           
           pauseButton.addEventListener("touchstart", (e) => {
             e.preventDefault();
             this.togglePause();
-          });
-          
-          // Mouse controls (for desktop)
-          jetpackButton.addEventListener("mousedown", (e) => {
-            e.preventDefault();
-            this.handleSpaceKeyDown();
-          });
-          
-          jetpackButton.addEventListener("mouseup", (e) => {
-            e.preventDefault();
-            this.spacePressed = false;
-            this.sounds.jetpack.stop();
           });
           
           pauseButton.addEventListener("click", (e) => {
@@ -688,6 +785,14 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
             document.getElementById("landingPage").style.display = "none";
             this.gameStarted = true;
             this.resetGame();
+            
+            // Show tap instructions briefly on mobile
+            if (this.isMobile) {
+              this.tapInstructionsDiv.style.display = "block";
+              this.tapInstructionsDiv.style.opacity = "1";
+              this.instructionFadeTimer = 5000; // 5 seconds
+            }
+            
             this.bgMusic.play().catch(() => {
               console.log("Audio couldn't autoplay. User interaction required.");
             });
@@ -730,6 +835,37 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
             this.spacePressed = true;
             this.sounds.jetpack.play();
           }
+        }
+        
+        handleTapStart() {
+          if (!this.gameStarted) {
+            this.gameStarted = true;
+            this.resetGame();
+          } else if (this.gameOver) {
+            this.resetGame();
+          } else if (this.isPaused) {
+            this.togglePause();
+          } else {
+            this.tapActive = true;
+            this.spacePressed = true; // Use the same flag for tap and space
+            this.sounds.jetpack.play();
+            
+            // Hide the tap instructions when user taps
+            if (this.tapInstructionsDiv.style.opacity !== "0") {
+              this.tapInstructionsDiv.style.opacity = "0";
+              this.instructionFadeTimer = 0;
+              // Hide completely after fade out
+              setTimeout(() => {
+                this.tapInstructionsDiv.style.display = "none";
+              }, 500);
+            }
+          }
+        }
+        
+        handleTapEnd() {
+          this.tapActive = false;
+          this.spacePressed = false;
+          this.sounds.jetpack.stop();
         }
         
         togglePause() {
@@ -782,6 +918,13 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
           this.pauseIndicatorDiv.style.display = "none";
           this.updateUI();
           
+          // Show instructions briefly on mobile after reset
+          if (this.isMobile) {
+            this.tapInstructionsDiv.style.display = "block";
+            this.tapInstructionsDiv.style.opacity = "1";
+            this.instructionFadeTimer = 5000; // 5 seconds
+          }
+          
           // Ensure stars are reset
           this.starfield.stars = [];
           this.starfield.initStars();
@@ -800,11 +943,22 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
         updateUI() {
           this.scoreDiv.textContent = `SCORE: ${this.score}`;
           this.highScoreDiv.textContent = `HIGH SCORE: ${this.highScore}`;
-          this.fuelGaugeDiv.textContent = `FUEL: ${Math.round(this.player.fuel)}%`;
           
-          // Update fuel bar
-          if (this.fuelLevelBar) {
-            this.fuelLevelBar.style.width = `${this.player.fuel}%`;
+          // Update fuel gauge with color based on level
+          const fuelPercentage = Math.round(this.player.fuel);
+          this.fuelGaugeDiv.textContent = `FUEL: ${fuelPercentage}%`;
+          
+          // Change fuel text color based on fuel level
+          if (fuelPercentage > 60) {
+            this.fuelGaugeDiv.style.color = "var(--fuel-high)"; // Green
+            // Adding a subtle text-shadow for better visibility
+            this.fuelGaugeDiv.style.textShadow = "0 0 4px rgba(46, 204, 64, 0.5)";
+          } else if (fuelPercentage > 30) {
+            this.fuelGaugeDiv.style.color = "var(--fuel-medium)"; // Yellow
+            this.fuelGaugeDiv.style.textShadow = "0 0 4px rgba(255, 220, 0, 0.5)";
+          } else {
+            this.fuelGaugeDiv.style.color = "var(--fuel-low)"; // Red
+            this.fuelGaugeDiv.style.textShadow = "0 0 4px rgba(255, 65, 54, 0.5)";
           }
           
           this.levelDiv.textContent = `LEVEL: ${this.level}${this.comboMultiplier > 1 ? ' × ' + this.comboMultiplier.toFixed(1) : ''}`;
@@ -1020,6 +1174,20 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
             const currentTime = performance.now();
             
             try {
+              // Update instruction fade timer
+              if (this.instructionFadeTimer > 0) {
+                this.instructionFadeTimer -= 16.67 * deltaTime; // Approximate milliseconds per frame
+                if (this.instructionFadeTimer <= 0) {
+                  this.tapInstructionsDiv.style.opacity = "0";
+                  // Hide completely after fade out
+                  setTimeout(() => {
+                    if (this.tapInstructionsDiv.style.opacity === "0") {
+                      this.tapInstructionsDiv.style.display = "none";
+                    }
+                  }, 500);
+                }
+              }
+              
               // Update game components
               this.starfield.update(deltaTime);
               this.player.update(deltaTime, this.spacePressed);
@@ -1130,11 +1298,19 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
               );
               
               this.ctx.font = "24px VT323";
-              this.ctx.fillText(
-                "Hold Space to use Jetpack",
-                this.canvas.width / 2,
-                this.canvas.height / 2
-              );
+              if (this.isMobile) {
+                this.ctx.fillText(
+                  "Tap to use Jetpack",
+                  this.canvas.width / 2,
+                  this.canvas.height / 2
+                );
+              } else {
+                this.ctx.fillText(
+                  "Hold Space to use Jetpack",
+                  this.canvas.width / 2,
+                  this.canvas.height / 2
+                );
+              }
               this.ctx.shadowBlur = 0;
             }
             
