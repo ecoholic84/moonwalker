@@ -728,6 +728,9 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
         
         createParticleSystem() {
           this.particleSystem = new ParticleSystem(this);
+          // Force clear any residual particles on init
+          this.particleSystem.particles = [];
+          this.particleSystem.particlePool = [];
         }
         
         createStarfield() {
@@ -1238,6 +1241,9 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
         
         render() {
           try {
+            // First, explicitly clear the entire canvas
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            
             // Apply camera shake if active
             this.ctx.save();
             
@@ -3192,7 +3198,7 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
             }
             
             // Remove dead particles and recycle them
-            if (p.life <= 0) {
+            if (p.life <= 0 || p.x < -100 || p.x > this.gameManager.canvas.width + 100) {
               // Recycle particle
               this.particlePool.push(this.particles.splice(i, 1)[0]);
             }
