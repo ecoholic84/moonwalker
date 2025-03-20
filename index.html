@@ -751,6 +751,7 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
         }
         
         resetGame() {
+          // Reset game state
           this.gameOver = false;
           this.isPaused = false;
           this.score = 0;
@@ -761,14 +762,29 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
           this.powerups = [];
           this.activePowerups = [];
           this.speedModifier = 1.0;
+          
+          // Reset the player
           this.player.reset(this.surfaceHeight);
+          
+          // Reset animation counters/timers
+          this.frameCount = 0;
+          
+          // Reset particle system
+          this.particleSystem.particles = [];
+          this.particleSystem.particlePool = [];
+          
+          // Remove any visual effects
+          this.shakeIntensity = 0;
+          this.shakeDuration = 0;
+          
+          // Reset UI
           this.gameOverDiv.style.display = "none";
           this.pauseIndicatorDiv.style.display = "none";
           this.updateUI();
           
-          // Clear any visual effects
-          this.shakeIntensity = 0;
-          this.shakeDuration = 0;
+          // Ensure stars are reset
+          this.starfield.stars = [];
+          this.starfield.initStars();
           
           // Remove any powerup indicators
           const indicators = document.querySelectorAll('.powerup-indicator');
@@ -777,6 +793,8 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
           // Remove any score popups or level up notifications
           const popups = document.querySelectorAll('.score-popup, .level-up-notification');
           popups.forEach(el => el.remove());
+          
+          console.log("Game fully reset");
         }
         
         updateUI() {
@@ -1154,10 +1172,17 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
           );
           
           // Add craters and details to the lunar surface
+          // Use a deterministic approach based on x position rather than frameCount
           for (let i = 0; i < 15; i++) {
-            const x = (this.frameCount * 2 + i * this.canvas.width / 15) % this.canvas.width;
-            const y = this.surfaceHeight + 5 + Math.random() * 20;
-            const radius = 2 + Math.random() * 6;
+            // Fixed crater positions that scroll
+            const baseX = (i * this.canvas.width / 15);
+            const x = (baseX - (this.frameCount * 2) % this.canvas.width) % this.canvas.width;
+            if (x < 0) continue;
+            
+            // Use a fixed seed for each crater based on its index
+            const seed = i * 123.456;
+            const y = this.surfaceHeight + 5 + (Math.sin(seed) * 10 + 10);
+            const radius = 2 + Math.abs(Math.sin(seed * 2)) * 6;
             
             this.ctx.fillStyle = "#222";
             this.ctx.beginPath();
@@ -1165,7 +1190,7 @@ ___      ___     ______      ______    _____  ___   __   __  ___       __      _
             this.ctx.fill();
             
             // Add a subtle highlight to some craters for more definition
-            if (Math.random() > 0.6) {
+            if (i % 3 === 0) {
               this.ctx.strokeStyle = "#444";
               this.ctx.lineWidth = 1;
               this.ctx.beginPath();
